@@ -1,0 +1,34 @@
+[package]
+name = "autoconfig"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+allocative = "0.3.4"
+anyhow = "1.0.98"
+clap = { version = "4.5.37", features = ["derive", "env"] }
+derive_more = { version = "2.0.1", features = ["full"] }
+display_container = "0.9.0"
+dupe = "0.9.1"
+either = "1.15.0"
+indent = "0.1.1"
+semver = "1.0.26"
+serde = "1.0.219"
+starlark = "0.13.0"
+starlark_derive = "0.13.0"
+starlark_map = "0.13.0"
+tempfile = "3.20.0"
+thiserror = "2.0.12"
+tree-sitter = "0.25.4"
+# tree-sitter-meson = { git = "https://github.com/tree-sitter-grammars/tree-sitter-meson.git", rev = "b1ff0037b665e7e84715390820d6ecbe763a9c79" }
+tree-sitter-meson = { path = "tree-sitter-meson" }
+
+[patch.crates-io]
+starlark = { path = "./target/patch/starlark-0.13.0" }
+
+[build-dependencies]
+patch-crate = "0.1.12"
+
+
+[package.metadata.patch]
+crates = ["starlark"]

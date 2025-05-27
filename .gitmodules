@@ -1,0 +1,3 @@
+[submodule "tree-sitter-meson"]
+	path = tree-sitter-meson
+	url = git@github.com:tree-sitter-grammars/tree-sitter-meson.git

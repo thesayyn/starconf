@@ -1,0 +1,23 @@
+diff --git a/src/values/types/string/methods.rs b/src/values/types/string/methods.rs
+index 55d51c7..f219235 100644
+--- a/src/values/types/string/methods.rs
++++ b/src/values/types/string/methods.rs
+@@ -1225,6 +1225,18 @@ pub(crate) fn string_methods(builder: &mut MethodsBuilder) {
+     fn upper(this: &str) -> anyhow::Result<String> {
+         Ok(this.to_uppercase())
+     }
++    #[starlark(speculative_exec_safe)]
++    fn to_upper(this: &str) -> anyhow::Result<String> {
++        Ok(this.to_uppercase())
++    }
++
++    #[starlark(speculative_exec_safe)]
++    fn underscorify(this: &str) -> anyhow::Result<String> {
++        Ok(this
++            .chars()
++            .map(|c| if c.is_alphanumeric() { c } else { '_' })
++            .collect())
++    }
+ 
+     /// [string.removeprefix](
+     /// https://docs.python.org/3.9/library/stdtypes.html#str.removeprefix

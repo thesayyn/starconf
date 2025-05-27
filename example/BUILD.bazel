@@ -1,0 +1,20 @@
+load("@starconf//:autoconf.bzl", "autoconf")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+autoconf(
+    name = "autoconf",
+    config_in = "config.h.in",
+    config_out = "config.h",
+    arguments_out = "arguments.txt"
+)
+
+cc_library(
+    name = "lib",
+    srcs = [
+        "main.c"
+    ],
+    conlyopts = [
+        "@$(location :arguments.txt)"
+    ],
+    additional_compiler_inputs = ["arguments.txt"]
+)
