@@ -1,1 +1,3 @@
+module(name = "starconf")
+
 bazel_dep(name = "rules_cc", version = "0.1.1")

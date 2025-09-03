@@ -81,8 +81,6 @@ fn main() {
 
     let module = Module::new();
 
-    println!("{:?}", args.dependencies);
-
     let store = Store {
         dependencies: RefCell::new(args.dependencies),
     };
