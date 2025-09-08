@@ -3,7 +3,7 @@ mod values;
 
 use clap::Parser;
 use clap::ValueHint;
-use meson::translate_to_starlark;
+// use meson::translate_to_starlark;
 
 use std::cell::RefCell;
 use std::fs;
@@ -51,9 +51,10 @@ fn main() {
     let content = fs::read_to_string(&args.config).unwrap();
 
     let ast = if args.config.ends_with("meson.build") {
-        let tr = translate_to_starlark(&content).unwrap();
+        // let tr = translate_to_starlark(&content).unwrap();
 
-        AstModule::parse("meson.build", tr, &dialect).unwrap()
+        // AstModule::parse("meson.build", tr, &dialect).unwrap()
+        panic!("Not supported")
     } else {
         AstModule::parse(&args.config, content, &dialect).unwrap()
     };

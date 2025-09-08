@@ -1,0 +1,43 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+
+platform(
+    name = "linux-aarch64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+)
+
+platform(
+    name = "linux-x86_64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+rust_binary(
+    name = "autoconf",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "@crate_index//:thiserror",
+        "@crate_index//:tempfile",
+        "@crate_index//:starlark_map",
+        "@crate_index//:starlark",
+        "@crate_index//:serde",
+        "@crate_index//:semver",
+        "@crate_index//:indent",
+        "@crate_index//:either",
+        "@crate_index//:dupe",
+        "@crate_index//:display_container",
+        "@crate_index//:derive_more",
+        "@crate_index//:clap",
+        "@crate_index//:anyhow",
+        "@crate_index//:allocative",
+    ],
+    proc_macro_deps = [
+        "@crate_index//:starlark_derive",
+    ],
+    platform = ":linux-x86_64",
+)
