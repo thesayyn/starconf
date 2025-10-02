@@ -14,6 +14,7 @@ use starlark::environment::Methods;
 use starlark::environment::MethodsBuilder;
 use starlark::environment::MethodsStatic;
 use starlark::eval::Evaluator;
+use starlark::values::starlark_value_as_type::StarlarkValueAsType;
 use starlark::values::tuple::UnpackTuple;
 use starlark::values::Coerce;
 use starlark::values::FreezeResult;
@@ -453,18 +454,13 @@ return {func} ();
     }
 }
 
-const HEAP_HIDDEN_COMPILER: &str = "#hidden_compiler#";
-
 #[starlark_module]
 pub fn register_autoconconfig_toplevels(_: &mut GlobalsBuilder) {
-    fn get_compiler<'v>(eval: &mut Evaluator<'v, '_, '_>) -> starlark::Result<Value<'v>> {
-        let compiler = eval.module().get(HEAP_HIDDEN_COMPILER).unwrap_or_else(|| {
-            let heap = eval.heap();
-            heap.alloc_complex(Compiler {
-                name: heap.alloc_str("clang"),
-            })
-        });
-        eval.module().set(HEAP_HIDDEN_COMPILER, compiler);
-        Ok(compiler)
+    fn get_compiler<'v>(eval: &mut Evaluator<'v, '_, '_>) -> starlark::Result<Compiler<'v>> {
+        Ok(Compiler {
+            name: eval.heap().alloc_str("clang"),
+        })
     }
+
+    const compiler: StarlarkValueAsType<Compiler> = StarlarkValueAsType::new();
 }

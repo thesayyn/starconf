@@ -144,27 +144,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
-name = "autoconfig"
-version = "0.1.0"
-dependencies = [
- "allocative",
- "anyhow",
- "clap",
- "derive_more 2.0.1",
- "display_container",
- "dupe",
- "either",
- "indent",
- "semver",
- "serde",
- "starlark",
- "starlark_derive",
- "starlark_map",
- "tempfile",
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1326,6 +1305,27 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "starconf"
+version = "0.1.0"
+dependencies = [
+ "allocative",
+ "anyhow",
+ "clap",
+ "derive_more 2.0.1",
+ "display_container",
+ "dupe",
+ "either",
+ "indent",
+ "semver",
+ "serde",
+ "starlark",
+ "starlark_derive",
+ "starlark_map",
+ "tempfile",
+ "thiserror 2.0.12",
+]
 
 [[package]]
 name = "starlark"

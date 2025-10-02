@@ -18,9 +18,9 @@ pub fn register_toplevels(builder: &mut GlobalsBuilder) {
     configure_file::register_toplevels(builder);
     dependency::register_toplevels(builder);
     option::register_toplevels(builder);
+    compiler::register_autoconconfig_toplevels(builder);
+    project::register_autoconconfig_toplevels(builder);
     builder.namespace("autoconfig", |builder| {
         autoconfig::register_autoconfig_toplevels(builder);
-        project::register_autoconconfig_toplevels(builder);
-        compiler::register_autoconconfig_toplevels(builder);
     });
 }

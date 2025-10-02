@@ -1,32 +1,17 @@
 module(name = "starconf")
 
+bazel_dep(name = "rules_cc", version = "0.2.9")
 bazel_dep(name = "toolchains_llvm", version = "1.5.0")
 bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "rules_cc", version = "0.1.1")
 bazel_dep(
     name = "rules_rust",
     version = "0.59.2",
 )
 
-
-rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
-rust.toolchain(
-    edition = "2021",
-    extra_target_triples = [
-        "aarch64-unknown-linux-gnu",
-        "x86_64-unknown-linux-gnu",
-    ],
-    versions = ["1.81.0"],
-)
-use_repo(rust, "rust_toolchains")
-
-register_toolchains("@rust_toolchains//:all")
-
 crate = use_extension(
     "@rules_rust//crate_universe:extension.bzl",
     "crate",
 )
-
 
 crate.from_cargo(
     name = "crate_index",
@@ -40,25 +25,22 @@ crate.from_cargo(
     ],
 )
 
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2021",
+    extra_target_triples = [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+    ],
+    versions = ["1.81.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
 use_repo(crate, "crate_index")
-
-
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-
-http_archive(
-    name = "sysroot_linux_x64",
-    build_file = "//build:sysroot.BUILD",
-    sha256 = "5df5be9357b425cdd70d92d4697d07e7d55d7a923f037c22dc80a78e85842d2c",
-    urls = ["https://commondatastorage.googleapis.com/chrome-linux-sysroot/toolchain/4f611ec025be98214164d4bf9fbe8843f58533f7/debian_bullseye_amd64_sysroot.tar.xz"],
-)
-
-http_archive(
-    name = "sysroot_linux_aarch64",
-    build_file = "//build:sysroot.BUILD",
-    sha256 = "d303cf3faf7804c9dd24c9b6b167d0345d41d7fe4bfb7d34add3ab342f6a236c",
-    urls = ["https://commondatastorage.googleapis.com/chrome-linux-sysroot/toolchain/906cc7c6bf47d4bd969a3221fc0602c6b3153caa/debian_bullseye_arm64_sysroot.tar.xz"],
-)
 
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
@@ -73,16 +55,70 @@ llvm.toolchain(
         "linux-x86_64": "stdc++",
     },
 )
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+_SYSROOT_LINUX_BUILD_FILE = """\
+filegroup(
+    name = "sysroot",
+    srcs = glob(["*/**"]),
+    visibility = ["//visibility:public"],
+)
+"""
+
+http_archive(
+    name = "org_chromium_sysroot_linux_arm64",
+    build_file_content = _SYSROOT_LINUX_BUILD_FILE,
+    sha256 = "b199942a0bd9c34800e8d7b669778ef45f2054b9f106039439383dd66efcef31",
+    urls = ["https://github.com/DavidZbarsky-at/sysroot-min/releases/download/v0.0.20/debian_bullseye_arm64_sysroot.tar.xz"],
+)
+
+http_archive(
+    name = "org_chromium_sysroot_linux_x86_64",
+    build_file_content = _SYSROOT_LINUX_BUILD_FILE,
+    sha256 = "b279dd2926e7d3860bb4e134997a45df5106f680e160a959b945580ba4ec755f",
+    urls = ["https://github.com/DavidZbarsky-at/sysroot-min/releases/download/v0.0.20/debian_bullseye_amd64_sysroot.tar.xz"],
+)
+
+http_archive(
+    name = "sysroot_darwin_universal",
+    build_file_content = """
+filegroup(
+    name = "sysroot",
+    srcs = glob(
+        include = ["**"],
+        exclude = ["**/*:*"],
+    ),
+    visibility = ["//visibility:public"],
+)
+""",
+    # The ruby header has an infinite symlink that we need to remove.
+    patch_cmds = ["rm System/Library/Frameworks/Ruby.framework/Versions/Current/Headers/ruby/ruby"],
+    integrity = "sha256-9qzGIJ251Wtn/K+R7B3v5Ici6esT3CH7kc/s6xSJ5X4=",
+    strip_prefix = "MacOSX14.5.sdk",
+    urls = ["https://github.com/alexey-lysiuk/macos-sdk/releases/download/14.5/MacOSX14.5.tar.xz"],
+)
+
 llvm.sysroot(
     name = "llvm_toolchain",
-    label = "@sysroot_linux_x64//:sysroot",
+    label = "@org_chromium_sysroot_linux_x86_64//:sysroot",
     targets = ["linux-x86_64"],
 )
 llvm.sysroot(
     name = "llvm_toolchain",
-    label = "@sysroot_linux_aarch64//:sysroot",
+    label = "@org_chromium_sysroot_linux_arm64//:sysroot",
     targets = ["linux-aarch64"],
 )
+
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@sysroot_darwin_universal//:sysroot",
+    targets = [
+        "darwin-aarch64",
+        "darwin-x86_64",
+    ],
+)
+
 use_repo(llvm, "llvm_toolchain")
 
 register_toolchains(

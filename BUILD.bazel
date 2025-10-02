@@ -18,7 +18,7 @@ platform(
 )
 
 rust_binary(
-    name = "autoconf",
+    name = "starconf",
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "@crate_index//:thiserror",

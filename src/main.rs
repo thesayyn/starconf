@@ -20,6 +20,7 @@ use values::store::{DDependency, Store};
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct CLI {
+    #[clap(short = 'c', long = "config")]
     config: String,
     #[clap(
            short = 'd',

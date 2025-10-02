@@ -1,5 +1,5 @@
 [package]
-name = "autoconfig"
+name = "starconf"
 version = "0.1.0"
 edition = "2021"
 
@@ -22,3 +22,8 @@ thiserror = "2.0.12"
 # tree-sitter = "0.25.4"
 # tree-sitter-meson = { git = "https://github.com/tree-sitter-grammars/tree-sitter-meson.git", rev = "b1ff0037b665e7e84715390820d6ecbe763a9c79" }
 # tree-sitter-meson = { path = "tree-sitter-meson" }
+
+
+[[bin]]
+name = "docgen"
+path = "./src/docgen.rs"
