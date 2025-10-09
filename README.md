@@ -2,6 +2,15 @@
 
 autoconf replacement for Bazel and BCR.
 
+# Goals
+
+- Be fast, so no one is concerned about autoconf being in the dependency graph.
+- Be fully `CCInfo` compatible
+- Be powerful enough to express complex config.h constraints.
+- Be fully compatible with cmake style config.h.in
+- Play nicely with Platforms and Transitions.
+- Replace checked in config.h files in BCR.
+
 # Problem Statement
 
 Bazel central registry is [full](https://github.com/search?q=repo%3Abazelbuild%2Fbazel-central-registry%20config.h&type=code) of checked in `config.h` files generated via autoconf. there are multiple `config.h` per module, for instance `config_windows.h` `config_linux_arm64.h` and so on.
