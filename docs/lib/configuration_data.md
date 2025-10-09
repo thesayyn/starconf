@@ -1,7 +1,7 @@
 # configuration_data
 
 ```python
-def configuration_data(*args, **kwargs)
+def configuration_data()
 ```
 
 ---

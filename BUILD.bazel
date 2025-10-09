@@ -39,5 +39,5 @@ rust_binary(
     proc_macro_deps = [
         "@crate_index//:starlark_derive",
     ],
-    platform = ":linux-x86_64",
+    # platform = ":linux-x86_64",
 )

@@ -42,14 +42,6 @@ abs(-12.34) == 12.34
 
 ---
 
-## add\_project\_arguments
-
-```python
-def add_project_arguments(*args, language: str = ...) -> None
-```
-
----
-
 ## all
 
 ```python
@@ -149,6 +141,22 @@ chr(0x1F63F) == '😿'
 
 ---
 
+## config\_in
+
+```python
+def config_in() -> str
+```
+
+---
+
+## config\_out
+
+```python
+def config_out() -> str
+```
+
+---
+
 ## configure\_file
 
 ```python
@@ -164,14 +172,6 @@ def debug(val, /) -> str
 ```
 
 Print the value with full debug formatting. The result may not be stable over time. Intended for debugging purposes and guaranteed to produce verbose output not suitable for user display.
-
----
-
-## dependency
-
-```python
-def dependency(name, /, *, disabler: bool = ..., required = ...)
-```
 
 ---
 
@@ -297,22 +297,6 @@ Apply a predicate to each element of the iterable, returning those that match. A
 filter(bool, [0, 1, False, True]) == [1, True]
 filter(lambda x: x > 2, [1, 2, 3, 4]) == [3, 4]
 filter(None, [True, None, False]) == [True, False]
-```
-
----
-
-## get\_compiler
-
-```python
-def get_compiler() -> Compiler
-```
-
----
-
-## get\_option
-
-```python
-def get_option(name: str, /, *, ty: str) -> str
 ```
 
 ---
@@ -541,22 +525,6 @@ def print(*args) -> None
 ```
 
 Print some values to the output.
-
----
-
-## project
-
-```python
-def project(name: str, /, *, version: str) -> None
-```
-
----
-
-## project\_version
-
-```python
-def project_version()
-```
 
 ---
 

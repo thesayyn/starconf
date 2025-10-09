@@ -1,8 +1,16 @@
-use std::{cell::{Ref, RefCell, RefMut}, convert::Infallible, ops::Deref};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    convert::Infallible,
+    ops::Deref,
+};
 
 use dupe::Dupe;
 use either::Either;
-use starlark::{coerce::coerce, typing::Ty, values::{type_repr::StarlarkTypeRepr, FrozenValue, UnpackValue, Value, ValueError, ValueLike}};
+use starlark::{
+    coerce::coerce,
+    typing::Ty,
+    values::{type_repr::StarlarkTypeRepr, UnpackValue, Value, ValueError, ValueLike},
+};
 
 use super::value::{CDGen, FrozenCDData, CD};
 
@@ -26,25 +34,23 @@ impl<'v> Clone for CDRef<'v> {
 
 impl<'v> Dupe for CDRef<'v> {}
 
-
-/// Mutably borrowed `Dict`.
+/// Mutably borrowed `CData`.
 pub struct CDMut<'v> {
     pub(crate) aref: RefMut<'v, CD<'v>>,
 }
 
-/// Reference to frozen `Dict`.
-pub struct FrozenCDRef {
-    dict: &'static FrozenCDData,
-}
+/// Reference to frozen `CData`.
+// pub struct FrozenCDRef {
+//     CData: &'static FrozenCDData,
+// }
 
 impl<'v> CDRef<'v> {
-    /// Downcast the value to a dict.
+    /// Downcast the value to a CData.
     pub fn from_value(x: Value<'v>) -> Option<CDRef<'v>> {
         if x.unpack_frozen().is_some() {
-            x.downcast_ref::<CDGen<FrozenCDData>>()
-                .map(|x| CDRef {
-                    aref: Either::Right(coerce(&x.0)),
-                })
+            x.downcast_ref::<CDGen<FrozenCDData>>().map(|x| CDRef {
+                aref: Either::Right(coerce(&x.0)),
+            })
         } else {
             let ptr = x.downcast_ref::<CDGen<RefCell<CD<'v>>>>()?;
             Some(CDRef {
@@ -55,12 +61,12 @@ impl<'v> CDRef<'v> {
 }
 
 impl<'v> CDMut<'v> {
-    /// Downcast the value to a mutable dict reference.
+    /// Downcast the value to a mutable CData reference.
     #[inline]
     pub fn from_value(x: Value<'v>) -> anyhow::Result<CDMut<'v>> {
         #[derive(thiserror::Error, Debug)]
-        #[error("Value is not dict, value type: `{0}`")]
-        struct NotDictError(&'static str);
+        #[error("Value is not CData, value type: `{0}`")]
+        struct NotCDataError(&'static str);
 
         #[cold]
         #[inline(never)]
@@ -68,7 +74,7 @@ impl<'v> CDMut<'v> {
             if x.downcast_ref::<CDGen<FrozenCDData>>().is_some() {
                 ValueError::CannotMutateImmutableValue.into()
             } else {
-                NotDictError(x.get_type()).into()
+                NotCDataError(x.get_type()).into()
             }
         }
 
@@ -83,13 +89,13 @@ impl<'v> CDMut<'v> {
     }
 }
 
-impl FrozenCDRef {
-    /// Downcast to frozen dict.
-    pub fn from_frozen_value(x: FrozenValue) -> Option<FrozenCDRef> {
-        x.downcast_ref::<CDGen<FrozenCDData>>()
-            .map(|x| FrozenCDRef { dict: &x.0 })
-    }
-}
+// impl FrozenCDRef {
+//     /// Downcast to frozen CData.
+//     pub fn from_frozen_value(x: FrozenValue) -> Option<FrozenCDRef> {
+//         x.downcast_ref::<CDGen<FrozenCDData>>()
+//             .map(|x| FrozenCDRef { CData: &x.0 })
+//     }
+// }
 
 impl<'v> Deref for CDRef<'v> {
     type Target = CD<'v>;
@@ -99,15 +105,13 @@ impl<'v> Deref for CDRef<'v> {
     }
 }
 
-
 impl<'v> StarlarkTypeRepr for CDRef<'v> {
     type Canonical = Self;
 
     fn starlark_type_repr() -> Ty {
-      Ty::any()
+        Ty::any()
     }
 }
-
 
 impl<'v> UnpackValue<'v> for CDRef<'v> {
     type Error = Infallible;

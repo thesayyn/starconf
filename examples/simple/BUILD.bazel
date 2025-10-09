@@ -4,7 +4,7 @@ load("@starconf//:autoconf.bzl", "autoconf")
 autoconf(
     name = "config",
     config_in = "config.h.in",
-    config_out = "config.h",
+    # config_out = "config.h",
     starlark_config = "autoconf.star"
 )
 

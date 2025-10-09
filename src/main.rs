@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 mod meson;
 mod values;
 
@@ -22,9 +23,34 @@ use values::store::{DDependency, Store};
 struct CLI {
     #[clap(short = 'c', long = "config")]
     config: String,
+
+    #[clap(long = "input")]
+    config_in: String,
+
+    #[clap(long = "output")]
+    config_out: String,
+
+    #[clap(long = "compiler")]
+    compiler_type: String,
+
+    #[clap(long = "cc")]
+    cc: String,
+
+    #[clap(
+        long = "isystem",
+        action = clap::ArgAction::Append
+    )]
+    system_include: Vec<String>,
+
+    #[clap(
+        long = "iquote",
+        action = clap::ArgAction::Append
+    )]
+    quote_include: Vec<String>,
+
     #[clap(
            short = 'd',
-           long = "ddependency",
+           long = "dependency",
            value_name = "NAME=SEMVER",
            value_parser = clap::value_parser!(DDependency),
            value_hint = ValueHint::Other,
@@ -83,8 +109,23 @@ fn main() {
 
     let module = Module::new();
 
+    let mut cc_args = vec![];
+
+    for arg in args.quote_include {
+        cc_args.push(format!("-iquote={}", arg));
+    }
+
+    for arg in args.system_include {
+        cc_args.push(format!("-isystem={}", arg));
+    }
+
     let store = Store {
         dependencies: RefCell::new(args.dependencies),
+        cc_compiler: args.compiler_type,
+        cc_executable: args.cc,
+        cc_args: cc_args,
+        config_in: args.config_in,
+        config_out: args.config_out,
     };
 
     {

@@ -4,7 +4,6 @@ use std::{fs, io};
 use crate::values::configuration_data::CDRef;
 use anyhow::Context;
 use starlark::environment::GlobalsBuilder;
-use starlark::eval::Evaluator;
 use starlark::starlark_module;
 use starlark::values::none::NoneType;
 use starlark::values::Value;
@@ -15,7 +14,6 @@ pub fn configure_file_methods(_: &mut GlobalsBuilder) {
         #[starlark(require = named)] input: Value<'v>,
         #[starlark(require = named)] output: Value<'v>,
         #[starlark(require = named)] configuration: Value<'v>,
-        eval: &mut Evaluator<'v, '_, '_>,
     ) -> anyhow::Result<NoneType> {
         let configuration =
             CDRef::from_value(configuration).context("failed to unpack configuration")?;

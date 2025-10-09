@@ -9,22 +9,17 @@ use allocative::Allocative;
 use anyhow::Context;
 use starlark;
 use starlark::any::ProvidesStaticType;
-use starlark::environment::GlobalsBuilder;
 use starlark::environment::Methods;
 use starlark::environment::MethodsBuilder;
 use starlark::environment::MethodsStatic;
-use starlark::eval::Evaluator;
-use starlark::values::starlark_value_as_type::StarlarkValueAsType;
+use starlark::starlark_module;
+use starlark::starlark_simple_value;
 use starlark::values::tuple::UnpackTuple;
-use starlark::values::Coerce;
 use starlark::values::FreezeResult;
-use starlark::values::FrozenValue;
 use starlark::values::StarlarkValue;
 use starlark::values::StringValue;
 use starlark::values::UnpackValue;
 use starlark::values::Value;
-use starlark::values::ValueLike;
-use starlark::{starlark_complex_value, starlark_module};
 use starlark_derive::starlark_value;
 use starlark_derive::Freeze;
 use starlark_derive::NoSerialize;
@@ -33,29 +28,19 @@ use tempfile::NamedTempFile;
 
 #[derive(Clone, Default, Debug, Trace, Freeze, ProvidesStaticType, Allocative, NoSerialize)]
 #[repr(C)]
-pub struct CompilerGen<'v, V: ValueLike<'v>> {
-    pub(crate) name: V::String,
+pub struct Compiler {
+    pub(crate) name: String,
+    pub(crate) executable: String,
+    pub(crate) args: Vec<String>,
 }
 
-impl<'v, V: ValueLike<'v>> Display for CompilerGen<'v, V> {
+impl Display for Compiler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<compiler>")
     }
 }
 
-unsafe impl<'v> Coerce<CompilerGen<'v, Value<'v>>> for CompilerGen<'static, FrozenValue> {}
-
-#[starlark_value(type = "Compiler")]
-impl<'v, V: ValueLike<'v>> StarlarkValue<'v> for CompilerGen<'v, V>
-where
-    Self: ProvidesStaticType<'v>,
-{
-    fn get_methods() -> Option<&'static Methods> {
-        get_compiler_methods()
-    }
-}
-
-impl<'v> UnpackValue<'v> for Compiler<'v> {
+impl<'v> UnpackValue<'v> for Compiler {
     type Error = Infallible;
 
     fn unpack_value_impl(value: Value<'v>) -> Result<Option<Self>, Self::Error> {
@@ -64,11 +49,21 @@ impl<'v> UnpackValue<'v> for Compiler<'v> {
     }
 }
 
-starlark_complex_value!(pub(crate) Compiler<'v>);
+#[starlark_value(type = "Compiler")]
+impl<'v> StarlarkValue<'v> for Compiler
+where
+    Self: ProvidesStaticType<'v>,
+{
+    fn get_methods() -> Option<&'static Methods> {
+        get_compiler_methods()
+    }
+}
 
-impl<'v> Compiler<'v> {
+starlark_simple_value!(Compiler);
+
+impl Compiler {
     pub(self) fn _compiles(&self, code: String, args: Option<Vec<String>>) -> bool {
-        let mut cmd = Command::new("gcc");
+        let mut cmd = Command::new(&self.executable);
         cmd.arg("-O0") // do not optimize output
             .arg("-v")
             .arg("-c")
@@ -77,6 +72,7 @@ impl<'v> Compiler<'v> {
             .arg("-") // read the program from stdin
             .arg("-o")
             .arg("/dev/null")
+            .args(&self.args)
             .stdin(Stdio::piped())
             .stderr(Stdio::null())
             .stdout(Stdio::null());
@@ -103,13 +99,14 @@ impl<'v> Compiler<'v> {
     }
     pub(self) fn compile_and_run(self, code: String) -> anyhow::Result<Vec<u8>> {
         let tmp = NamedTempFile::new().context("failed to create a temp file")?;
-        let mut cmd = Command::new("gcc")
+        let mut cmd = Command::new(&self.executable)
             .arg("-v")
             .arg("-x")
             .arg("c++")
             .arg("-") // read the program from stdin
             .arg("-o")
             .arg(tmp.path())
+            .args(self.args)
             .stdin(Stdio::piped())
             .stderr(Stdio::piped())
             .stdout(Stdio::piped())
@@ -149,19 +146,19 @@ pub(super) fn get_compiler_methods() -> Option<&'static Methods> {
 pub(crate) fn compiler_methods(registry: &mut MethodsBuilder) {
     // https://mesonbuild.com/Reference-manual_returned_compiler.html#compilercompiles
     fn compiles<'v>(
-        this: Compiler<'v>,
+        this: Compiler,
         #[starlark(require = pos)] code: StringValue<'v>,
         #[starlark(require = named)] args: Option<Value<'v>>,
-        #[starlark(require = named)] dependencies: Option<Value<'v>>,
-        #[starlark(require = named)] include_directories: Option<Value<'v>>,
-        #[starlark(require = named)] name: Option<StringValue<'v>>,
+        // #[starlark(require = named)] dependencies: Option<Value<'v>>,
+        // #[starlark(require = named)] include_directories: Option<Value<'v>>,
+        // #[starlark(require = named)] name: Option<StringValue<'v>>,
     ) -> starlark::Result<bool> {
         let compiles = this._compiles(code.to_string(), args.map(|v| vec![v.to_str()]));
         return Ok(compiles);
     }
 
     fn has_type<'v>(
-        this: Compiler<'v>,
+        this: Compiler,
         #[starlark(require = pos)] sym: Value<'v>,
         #[starlark(require = named)] prefix: Option<Value<'v>>,
         #[starlark(require = named)] args: Option<Value<'v>>,
@@ -183,10 +180,10 @@ int main(void) {{
     }
 
     fn has_header<'v>(
-        this: Compiler<'v>,
-        #[starlark(require = pos)] header_name: Value<'v>,
-        #[starlark(require = named)] prefix: Option<Value<'v>>,
-        #[starlark(require = named)] dependencies: Option<Value<'v>>,
+        this: Compiler,
+        #[starlark(require = pos)] header_name: String,
+        #[starlark(require = named)] prefix: Option<String>,
+        // #[starlark(require = named)] dependencies: Option<Value<'v>>,
     ) -> starlark::Result<bool> {
         let compiles = this._compiles(
             format!(
@@ -198,8 +195,8 @@ int main(void) {{
 #else
     #include <{hname}>
 #endif"#,
-                hname = header_name.to_str(),
-                prefix = prefix.map(|f| f.to_str()).unwrap_or("".into())
+                hname = header_name,
+                prefix = prefix.unwrap_or("".into())
             ),
             None,
         );
@@ -207,10 +204,10 @@ int main(void) {{
     }
 
     fn has_header_symbol<'v>(
-        this: Compiler<'v>,
-        #[starlark(require = pos)] header_name: Value<'v>,
-        #[starlark(require = pos)] symbol: Value<'v>,
-        #[starlark(require = named)] prefix: Option<Value<'v>>,
+        this: Compiler,
+        #[starlark(require = pos)] header_name: String,
+        #[starlark(require = pos)] symbol: String,
+        #[starlark(require = named)] prefix: Option<String>,
     ) -> starlark::Result<bool> {
         let compiles = this._compiles(
             format!(
@@ -223,9 +220,9 @@ int main(void) {{
     #endif
     return 0;
 }}"#,
-                hname = header_name.to_str(),
-                symbol = symbol.to_str(),
-                prefix = prefix.map(|f| f.to_str()).unwrap_or("".into())
+                hname = header_name,
+                symbol = symbol,
+                prefix = prefix.unwrap_or("".into())
             ),
             None,
         );
@@ -233,7 +230,7 @@ int main(void) {{
     }
 
     fn get_supported_arguments<'v>(
-        this: Compiler<'v>,
+        this: Compiler,
         #[starlark(args)] args: UnpackTuple<Value<'v>>,
     ) -> starlark::Result<Vec<Value<'v>>> {
         // https://github.com/mesonbuild/meson/blob/14010f4dfdb9847944592149b189184ab59b6de0/mesonbuild/compilers/mixins/clike.py#L1295
@@ -255,10 +252,10 @@ int main(void) {{
     }
 
     fn has_member<'v>(
-        this: Compiler<'v>,
-        #[starlark(require = pos)] type_name: Value<'v>,
-        #[starlark(require = pos)] member_name: Value<'v>,
-        #[starlark(require = named)] prefix: Option<Value<'v>>,
+        this: Compiler,
+        #[starlark(require = pos)] type_name: String,
+        #[starlark(require = pos)] member_name: String,
+        #[starlark(require = named)] prefix: Option<String>,
     ) -> starlark::Result<bool> {
         let compiles = this._compiles(
             format!(
@@ -270,9 +267,9 @@ int main(void) {{
     (void) foo;
     return 0;
 }}"#,
-                typename = type_name.to_str(),
-                member = member_name.to_str(),
-                prefix = prefix.map(|f| f.to_str()).unwrap_or("".into())
+                typename = type_name,
+                member = member_name,
+                prefix = prefix.unwrap_or("".into())
             ),
             None,
         );
@@ -280,9 +277,9 @@ int main(void) {{
     }
 
     fn sizeof<'v>(
-        this: Compiler<'v>,
-        #[starlark(require = pos)] sym: Value<'v>,
-        #[starlark(require = named)] prefix: Option<Value<'v>>,
+        this: Compiler,
+        #[starlark(require = pos)] sym: String,
+        #[starlark(require = named)] prefix: Option<String>,
     ) -> anyhow::Result<u32> {
         let output = this.compile_and_run(format!(
             r#"{prefix}
@@ -292,8 +289,8 @@ int main(void) {{
     printf("%ld", (long)(sizeof({})));
     return 0;
 }}"#,
-            sym.to_str(),
-            prefix = prefix.map(|f| f.to_str()).unwrap_or("".into())
+            sym,
+            prefix = prefix.unwrap_or("".into())
         ))?;
 
         let output = String::from_utf8(output).context("failed to parse stdout")?;
@@ -303,14 +300,14 @@ int main(void) {{
     }
 
     fn has_function<'v>(
-        this: &Compiler<'v>,
-        #[starlark(require = pos)] funcname: Value<'v>,
-        #[starlark(require = named)] prefix: Option<Value<'v>>,
-        #[starlark(require = named)] dependencies: Option<Value<'v>>,
+        this: &Compiler,
+        #[starlark(require = pos)] funcname: String,
+        #[starlark(require = named)] prefix: Option<String>,
+        // #[starlark(require = named)] dependencies: Option<Value<'v>>,
     ) -> anyhow::Result<bool> {
-        let prefix = prefix.map(|f| f.to_str()).unwrap_or("".into());
+        let prefix = prefix.unwrap_or("".into());
 
-        let func = funcname.to_str();
+        let func = funcname;
 
         // glibc defines functions that are not available on Linux as stubs that
         // fail with ENOSYS (such as e.g. lchmod). In this case we want to fail
@@ -452,15 +449,4 @@ return {func} ();
             Ok(compiles)
         }
     }
-}
-
-#[starlark_module]
-pub fn register_autoconconfig_toplevels(_: &mut GlobalsBuilder) {
-    fn get_compiler<'v>(eval: &mut Evaluator<'v, '_, '_>) -> starlark::Result<Compiler<'v>> {
-        Ok(Compiler {
-            name: eval.heap().alloc_str("clang"),
-        })
-    }
-
-    const compiler: StarlarkValueAsType<Compiler> = StarlarkValueAsType::new();
 }

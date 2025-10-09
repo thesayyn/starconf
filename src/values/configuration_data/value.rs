@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::fmt;
-use std::fmt::Display;
 use std::fmt::Debug;
+use std::fmt::Display;
 
 use allocative::Allocative;
 use serde::Serialize;
+use starlark::any::ProvidesStaticType;
 use starlark::collections::SmallMap;
 use starlark::environment::Methods;
 use starlark::environment::MethodsStatic;
@@ -23,8 +24,7 @@ use starlark::values::Heap;
 use starlark::values::StarlarkValue;
 use starlark::values::Value;
 use starlark_derive::starlark_value;
-use starlark_derive::Trace; 
-use starlark::any::ProvidesStaticType;
+use starlark_derive::Trace;
 
 #[derive(Clone, Default, Trace, Debug, ProvidesStaticType, Allocative)]
 pub(crate) struct CDGen<T>(pub(crate) T);
@@ -49,32 +49,30 @@ pub(crate) fn configuration_data_methods() -> Option<&'static Methods> {
     RES.methods(super::methods::configuration_data_methods)
 }
 
-
 #[starlark_value(type = "configuration_data")]
 impl<'v, T: CDLike<'v> + 'v> StarlarkValue<'v> for CDGen<T>
 where
     Self: ProvidesStaticType<'v>,
 {
-    type Canonical = FrozenCD; 
+    type Canonical = FrozenCD;
 
     fn get_methods() -> Option<&'static Methods> {
         configuration_data_methods()
     }
-
 }
 
 pub(crate) type FrozenCD = CDGen<FrozenCDData>;
-pub(crate) type MutableCD<'v> = CDGen<RefCell<CD<'v>>>;
+// pub(crate) type MutableCD<'v> = CDGen<RefCell<CD<'v>>>;
 
 // Can convert from unfrozen to frozen.
 unsafe impl<'v> Coerce<CD<'v>> for FrozenCDData {}
 
-
 #[derive(Clone, Default, Trace, Debug, ProvidesStaticType, Allocative)]
 pub(crate) struct ValueAndDescription<'v> {
     pub description: Option<Value<'v>>,
-    pub value: Value<'v>
+    pub value: Value<'v>,
 }
+
 /// Unfrozen CD
 #[derive(Clone, Default, Trace, Debug, ProvidesStaticType, Allocative)]
 #[repr(transparent)]
@@ -101,14 +99,9 @@ impl<'v> AllocValue<'v> for CD<'v> {
     }
 }
 
-trait CDLike<'v>: Debug + Allocative {
-  
-}
+trait CDLike<'v>: Debug + Allocative {}
 
-impl<'v> CDLike<'v> for RefCell<CD<'v>> {
-
-}
-
+impl<'v> CDLike<'v> for RefCell<CD<'v>> {}
 
 // Frozen CDData
 #[derive(Clone, Default, Debug, ProvidesStaticType, Allocative)]
@@ -135,9 +128,11 @@ impl AllocFrozenValue for FrozenCDData {
 // Freeze implementation for CD
 impl<'v> Freeze for CDGen<RefCell<CD<'v>>> {
     type Frozen = CDGen<FrozenCDData>;
-    fn freeze(self, freezer: &Freezer) -> FreezeResult<Self::Frozen> {
+    fn freeze(self, _freezer: &Freezer) -> FreezeResult<Self::Frozen> {
         // let content = self.0.into_inner().content.freeze(freezer)?;
         // Ok(CDGen(FrozenCDData { content }))
-        Err(FreezeError::new("configuration_data can not passed between threads safely.".to_string()))
+        Err(FreezeError::new(
+            "configuration_data can not passed between threads safely.".to_string(),
+        ))
     }
 }
