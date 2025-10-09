@@ -9,7 +9,7 @@ def configuration_data()
 ## configuration\_data.set
 
 ```python
-def configuration_data.set(key, value, /, *, description = ...) -> None
+def configuration_data.set(key: str, value, /, *, description = ...) -> None
 ```
 
 ---

@@ -11,6 +11,14 @@ autoconf replacement for Bazel and BCR.
 - Play nicely with Platforms and Transitions.
 - Replace checked in config.h files in BCR.
 
+
+# Try it out
+
+Checkout the [examples/simple](./examples/simple) folder for a really simple example.
+
+Simply clone this repo and run `bazel build examples/simple:lib`.
+
+
 # Problem Statement
 
 Bazel central registry is [full](https://github.com/search?q=repo%3Abazelbuild%2Fbazel-central-registry%20config.h&type=code) of checked in `config.h` files generated via autoconf. there are multiple `config.h` per module, for instance `config_windows.h` `config_linux_arm64.h` and so on.

@@ -56,4 +56,5 @@ pub fn register_toplevels(builder: &mut GlobalsBuilder) {
         register_autoconf_toplevels(builder);
     });
     register_fn_toplevels(builder);
+    type_toplevels(builder);
 }
