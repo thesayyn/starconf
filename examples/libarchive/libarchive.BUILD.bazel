@@ -1,0 +1,96 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@starconf//:autoconf.bzl", "autoconf")
+
+package(default_visibility = ["//visibility:public"])
+
+# Generate config.h using starconf
+autoconf(
+    name = "config",
+    config_in = "@libarchive_example//:config.h.in",
+    starlark_config = "@libarchive_example//:config.star",
+)
+
+cc_library(
+    name = "libarchive",
+    srcs = [
+        "@libarchive_example//:stubs.c",
+    ] + glob(
+        [
+            "libarchive/*.c",
+        ],
+        exclude = [
+            # Windows-specific files
+            "libarchive/archive_read_disk_windows.c",
+            "libarchive/archive_windows.c",
+            "libarchive/archive_write_disk_windows.c",
+            "libarchive/filter_fork_windows.c",
+            # Blake2 reference implementation (we use the libarchive internal one or external lib)
+            "libarchive/archive_blake2*.c",
+            # Platform-specific ACL files (require specific platform features)
+            "libarchive/archive_disk_acl_darwin.c",
+            "libarchive/archive_disk_acl_freebsd.c",
+            "libarchive/archive_disk_acl_linux.c",
+            "libarchive/archive_disk_acl_sunos.c",
+            # RAR5 requires blake2 library (libb2)
+            "libarchive/archive_read_support_format_rar5.c",
+        ],
+    ),
+    hdrs = glob([
+        "libarchive/*.h",
+    ]),
+    copts = [
+        "-DHAVE_CONFIG_H",
+        "-D__LIBARCHIVE_ENABLE_VISIBILITY",
+        "-Wno-implicit-function-declaration",
+        "-Wno-int-conversion",
+    ],
+    includes = ["libarchive"],
+    linkopts = select({
+        "@platforms//os:macos": ["-liconv"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":config",
+        "@zlib",
+    ],
+)
+
+# Frontend utility library (shared by bsdtar, bsdcpio, bsdcat)
+cc_library(
+    name = "libarchive_fe",
+    srcs = glob([
+        "libarchive_fe/*.c",
+    ]),
+    hdrs = glob([
+        "libarchive_fe/*.h",
+    ]),
+    copts = [
+        "-DHAVE_CONFIG_H",
+    ],
+    includes = ["libarchive_fe"],
+    deps = [
+        ":config",
+        ":libarchive",
+    ],
+)
+
+cc_binary(
+    name = "bsdtar",
+    srcs = glob(
+        [
+            "tar/*.c",
+            "tar/*.h",
+        ],
+        exclude = [
+            "tar/bsdtar_windows.c",
+            "tar/bsdtar_windows.h",
+        ],
+    ),
+    copts = [
+        "-DHAVE_CONFIG_H",
+    ],
+    deps = [
+        ":libarchive",
+        ":libarchive_fe",
+    ],
+)

@@ -1,0 +1,6 @@
+# Export config files for use by @libarchive
+exports_files([
+    "config.h.in",
+    "config.star",
+    "stubs.c",
+])

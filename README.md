@@ -1,66 +1,60 @@
 # starconf
 
-autoconf replacement for Bazel and BCR.
+Autoconf replacement for Bazel and BCR.
 
 # Goals
 
-- Be fast, so no one is concerned about autoconf being in the dependency graph.
+- Be fast enough that no one worries about having autoconf in the dependency graph
 - Be fully `CCInfo` compatible
-- Be powerful enough to express complex config.h constraints.
-- Be fully compatible with cmake style config.h.in
-- Play nicely with Platforms and Transitions.
-- Replace checked in config.h files in BCR.
-
+- Be powerful enough to express complex `config.h` constraints
+- Be fully compatible with CMake-style `config.h.in`
+- Play nicely with Platforms and Transitions
+- Replace checked-in `config.h` files in BCR
 
 # Try it out
 
-Checkout the [examples/simple](./examples/simple) folder for a really simple example.
+Check out the [examples/simple](./examples/simple) folder for a simple example.
 
-Simply clone this repo and run `bazel build examples/simple:lib`.
-
+Clone this repo and run `bazel build examples/simple:lib`.
 
 # Problem Statement
 
-Bazel central registry is [full](https://github.com/search?q=repo%3Abazelbuild%2Fbazel-central-registry%20config.h&type=code) of checked in `config.h` files generated via autoconf. there are multiple `config.h` per module, for instance `config_windows.h` `config_linux_arm64.h` and so on.
+The Bazel Central Registry is [full](https://github.com/search?q=repo%3Abazelbuild%2Fbazel-central-registry%20config.h&type=code) of checked-in `config.h` files generated via autoconf. There are multiple `config.h` files per module—for instance, `config_windows.h`, `config_linux_arm64.h`, and so on.
 
-These checked in `config.h` files assume that the current CC toolchain configuration somewhat same as the one that generated the config.h file, this does not work if you are compiling against some exotic platform or different architecture with a custom CC toolchain configuration.
+These checked-in `config.h` files assume that the current CC toolchain configuration is roughly the same as the one that generated them. This doesn't work when compiling for an exotic platform or different architecture with a custom CC toolchain configuration.
 
 # Documentation
 
-Starlark API is strongly typed, and its documentation can be found at [docs/lib](./docs/lib/compiler.md)
+The Starlark API is strongly typed. Documentation can be found at [docs/lib](./docs/lib/compiler.md).
 
 # FAQ
 
+## What is starconf?
 
-## what is starconf
+starconf is a program that embeds a Starlark interpreter to express what would be [M4](https://www.gnu.org/software/m4/m4.html)-style conditions in Starlark.
 
-starconf is a program that embeds a starlark interpreter to allow describing what would be [M4](https://www.gnu.org/software/m4/m4.html) style conditions in starlark.
+## How does it work?
 
-## how does it work
+It works the same way as autoconf. For example, starconf has a `cc.has_header()` function that works like autoconf's `AC_CHECK_HEADER`.
 
-It works the same way as autoconf, for example starconf has a `cc.has_header()` function that works the same way as autoconfs `AC_CHECK_HEADER`.
+starconf exports a Bazel rule called `starconf` that takes two inputs: a `config.h.in` and a `configure.star` file that describes how to satisfy the conditions inside the `config.h.in` file. Its output is a `config.h` file that can be included in subsequent `cc_library` targets because `starconf` exports `CcInfo`.
 
-starconf exports a bazel rule `starconf` that takes 2 things as inputs; a `config.h.in` and a `configure.star` file that describes how to satisfy the conditions inside of `config.h.in` file. its output is a `config.h` file that can be included in the subsequent `cc_library` targets because `starconf` is a rule that exports `CcInfo`.
-starconf can also take `deps` (cc_library) targets and make them available in calls such as `has_header_symbol`, `has_header` and its variants.
+starconf can also take `deps` (`cc_library` targets) and make them available in calls such as `has_header_symbol`, `has_header`, and related functions.
 
+## Why not use Bazel's Platforms and Configuration?
 
-## why not use Bazels Platforms and Configuration
+Two main reasons:
 
-Two main reasons;
+First, [configuration attributes](https://bazel.build/docs/configurable-attributes) need to be declared statically. That means declaring thousands of flags like `flags//int:have_int16_t` and `flags//int:have_uintmax_t`. Assume these are generated automatically by some tool and there's a canonical module that defines them—that solves part of the problem.
 
-[configuration attributes](https://bazel.build/docs/configurable-attributes) needs to be declared statically first, that means declaring thousands of flags, eg `flags//int:have_int16_t`, `flags//int:have_uintmax_t`.
-assume these are generated automagically by some tool and there is canonical module that defines them. that solves the problem.
+But how does one determine which combination of flags the *current CC toolchain* supports? The answer isn't simple. You'd need to invoke the CC toolchain with some test C code that either builds or fails. Based on that, you'd have to generate a transition that enables some flags while disabling others. And we haven't even gotten to generating a `config.h` to feed into `cc_library` yet. You'd also need something that can *enumerate* the enabled flags and turn them into a `config.h` file. Good luck turning [this libarchive meson.build](https://github.com/mesonbuild/wrapdb/blob/master/subprojects/packagefiles/libarchive/meson.build) into a select statement.
 
-now, how does one determine what combination of these flags that the *current CC toolchain* supports? answer is not an easy one. one would need to invoke the CC toolchain with some magic `C` code that either builds or not. based on that the we'd have to generate a transition that enables some flags while disabling others. so far we haven't gotten to the part where we generate a config.h to feed into the cc_library. now we need something that can *enumerate* the enabled flags and turn that into config.h file to take part in the compilation. good luck turning [this](https://github.com/mesonbuild/wrapdb/blob/master/subprojects/packagefiles/libarchive/meson.build) into a select statement.
+Second, this is a gross oversimplification—there are limitations I haven't mentioned. Bazel doesn't allow you to change the configuration during the execution phase, but that's when we can actually execute the current CC toolchain to determine what it's capable of when compiling against the current target platform. Can't we just do that during the loading phase? No—the "current CC toolchain" means whatever compiler the current target needs, and that isn't available until the analysis phase because of toolchain selection.
 
-this is a gross oversimplification of the problem, there are some limitations that i have not mentioned yet. Bazel does not allow you to change the configuration of the during execution phase, but that's when we can actually execute the current `CC` toolchain to determine what its capable of when compiling against the current `target platform`. Can't we just do that during loading phase then? NO. remember that current CC toolchain means whatever current target needs as a compiler and that is not avaiable up until analysis phase because of toolchain selection.
+## Why Starlark?
 
+Bazel uses Starlark, so it comes naturally to people who work with Bazel frequently.
 
-## why starlark?
+## How does it compare to autoconf?
 
-Bazel uses starlark, so comes naturally to people who engage with Bazel frequently.
-
-
-## how does it compare to autoconf?
-
-Its identical to what autoconf does; inspect the `CC` toolchain and the current `target platform` and generate a config.h that allows the C code to compile against the current configuration.
+It's identical to what autoconf does: inspect the CC toolchain and the current target platform, then generate a `config.h` that allows the C code to compile against the current configuration.
